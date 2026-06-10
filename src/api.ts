@@ -16,7 +16,7 @@ export class InndxClient {
   private readonly http: BaseHttpClient
 
   constructor(private readonly config: ClientConfig) {
-    this.account = privateKeyToAccount(config.walletPrivateKey)
+    this.account = privateKeyToAccount(config.walletKey)
     this.http = new BaseHttpClient(config, buildChargeFetch(config, this.account))
   }
 
