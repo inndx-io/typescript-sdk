@@ -1,6 +1,12 @@
 # Changelog
 
 ---
+## [0.1.1](https://github.com/inndx-io/typescript-sdk/-/compare/0.1.0...0.1.1) - 2026-06-10
+
+### Bug Fixes
+
+- Fix constructor in InndxClient - ([789d7ba](https://github.com/inndx-io/typescript-sdk/-/commit/789d7ba4dce3df75a6a07d7160ce1933d9fb2a0f)) - Timothy Pogue
+---
 ## [0.1.0] - 2026-06-10
 
 ### Features
