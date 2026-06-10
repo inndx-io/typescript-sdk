@@ -17,7 +17,7 @@ pnpm add github:inndx-io/typescript-sdk
 Pin a specific tag or commit (recommended for reproducible installs):
 
 ```bash
-pnpm add github:inndx-io/typescript-sdk#v0.1.0
+pnpm add github:inndx-io/typescript-sdk#v0.1.2
 pnpm add github:inndx-io/typescript-sdk#<commit-sha>
 ```
 
