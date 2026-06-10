@@ -1,0 +1,59 @@
+{
+  "name": "@inndx-io/sdk",
+  "version": "0.0.0",
+  "description": "Typescript client SDK for inndx",
+  "type": "module",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./*": {
+      "import": "./dist/*.mjs",
+      "require": "./dist/*.cjs",
+      "types": "./dist/*.d.ts"
+    }
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome format . --write",
+    "build": "tsdown",
+    "prepare": "pnpm build",
+    "typecheck": "tsc --noEmit",
+    "scripts:test": "tsx scripts/test.ts"
+  },
+  "keywords": [
+    "inndx",
+    "sdk",
+    "typescript",
+    "development",
+    "kit",
+    "sdk",
+    "client",
+    "api"
+  ],
+  "author": "inndx-io Team <hello@inndx.io>",
+  "license": "MIT",
+  "packageManager": "pnpm@11.1.2",
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.13",
+    "@types/node": "^25.6.0",
+    "@types/qs": "^6.15.1",
+    "tsdown": "^0.22.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  },
+  "dependencies": {
+    "mppx": "^0.6.30",
+    "qs": "^6.15.2",
+    "viem": "^2.52.2",
+    "zod": "^4.4.3"
+  }
+}

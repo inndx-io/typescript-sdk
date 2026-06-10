@@ -1,0 +1,11 @@
+version: '3'
+
+silent: true
+
+includes:
+  version:
+    taskfile: .taskfile/version.yml
+  typescript:
+    taskfile: .taskfile/typescript.yml
+  devtools:
+    taskfile: .taskfile/devtools.yml

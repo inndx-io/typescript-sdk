@@ -1,0 +1,27 @@
+version: '3'
+
+tasks:
+  fmt:
+    desc: Format the code
+    cmds:
+      - pnpm format
+
+  lint:
+    desc: Lint the code
+    cmds:
+      - pnpm lint
+
+  test:
+    desc: Run the tests
+    cmds:
+      - pnpm test
+
+  build:
+    desc: Build the artifacts
+    cmds:
+      - pnpm build
+
+  publish:
+    desc: Publish the package to npm
+    cmds:
+      - pnpm publish --access public --no-git-checks
