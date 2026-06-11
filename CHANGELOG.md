@@ -1,6 +1,17 @@
 # Changelog
 
 ---
+## [0.2.0](https://github.com/inndx-io/typescript-sdk/-/compare/0.1.2...0.2.0) - 2026-06-11
+
+### Features
+
+- Add ability to force close stranded sessions on chain - ([7f416c2](https://github.com/inndx-io/typescript-sdk/-/commit/7f416c26a2bc00eb3ce67868def315f14ff8acdd)) - Timothy Pogue
+
+### Miscellaneous
+
+- Fix linting - ([d5a4d87](https://github.com/inndx-io/typescript-sdk/-/commit/d5a4d8781fb8b153cb31feedd8c62df6c262c6ee)) - Timothy Pogue
+- Update README - ([3d1a3ec](https://github.com/inndx-io/typescript-sdk/-/commit/3d1a3ec3c048f4be62915de481f1cee82ab3af8e)) - Timothy Pogue
+---
 ## [0.1.2](https://github.com/inndx-io/typescript-sdk/-/compare/0.1.1...0.1.2) - 2026-06-10
 
 ### Bug Fixes
