@@ -12,7 +12,9 @@ const DEFAULT_ACCEPT_PAYMENT_ORIGINS = ['*.inndx.io']
 
 const CHAIN_IDS = { mainnet: 4217, testnet: 42431 } as const
 
-type GetClient = (parameters: { chainId?: number | undefined }) => Client | Promise<Client>
+type GetClient = (parameters: {
+  chainId?: number | undefined
+}) => Client | Promise<Client>
 
 /**
  * Resolves the SDK's network config into mppx's only network hook, `getClient`.
@@ -29,7 +31,10 @@ function buildGetClient(config: ClientConfig): GetClient | undefined {
   const rpcUrls =
     config.rpcUrls ??
     (config.rpcUrl
-      ? { [CHAIN_IDS.mainnet]: config.rpcUrl, [CHAIN_IDS.testnet]: config.rpcUrl }
+      ? {
+          [CHAIN_IDS.mainnet]: config.rpcUrl,
+          [CHAIN_IDS.testnet]: config.rpcUrl,
+        }
       : undefined)
 
   if (!rpcUrls && !config.feePayerUrl) return undefined
@@ -56,7 +61,10 @@ function networkOptions(config: ClientConfig) {
  * The default transport for the whole client: wraps the user's fetch with charge
  * handling so every charge-billed endpoint settles per request with no ceremony.
  */
-export function buildChargeFetch(config: ClientConfig, account: Account): FetchLike {
+export function buildChargeFetch(
+  config: ClientConfig,
+  account: Account
+): FetchLike {
   return Fetch.from({
     methods: [tempo.charge({ account, ...networkOptions(config) })],
     fetch: config.fetch ?? globalThis.fetch,

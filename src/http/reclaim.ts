@@ -150,7 +150,11 @@ function resolveChainId(config: ClientConfig, override?: number): number {
   return override ?? config.chainId ?? CHAIN_IDS.mainnet
 }
 
-function resolveEscrow(config: ClientConfig, chainId: number, override?: Hex): Hex {
+function resolveEscrow(
+  config: ClientConfig,
+  chainId: number,
+  override?: Hex
+): Hex {
   const escrow = override ?? config.escrowContract ?? DEFAULT_ESCROW[chainId]
   if (!escrow)
     throw new Error(
@@ -176,11 +180,15 @@ function resolveClient(config: ClientConfig, chainId: number): Client {
 
   if (config.client) return config.client
 
-  const transport = http(config.rpcUrls?.[chainId] ?? config.rpcUrl ?? DEFAULT_RPC[chainId])
+  const transport = http(
+    config.rpcUrls?.[chainId] ?? config.rpcUrl ?? DEFAULT_RPC[chainId]
+  )
 
   return createClient({
     chain: { ...tempoChain, id: chainId },
-    transport: config.feePayerUrl ? withFeePayer(transport, http(config.feePayerUrl)) : transport,
+    transport: config.feePayerUrl
+      ? withFeePayer(transport, http(config.feePayerUrl))
+      : transport,
   })
 }
 
@@ -224,20 +232,29 @@ export function createReclaimScope(
       calls: [
         {
           to: escrowContract,
-          data: encodeFunctionData({ abi: escrowReclaimAbi, functionName, args: [channelId] }),
+          data: encodeFunctionData({
+            abi: escrowReclaimAbi,
+            functionName,
+            args: [channelId],
+          }),
         },
       ],
       ...(feeToken ? { feeToken } : {}),
     } as never)
 
-    const serialized = await signTransaction(client, { ...prepared, account } as never)
+    const serialized = await signTransaction(client, {
+      ...prepared,
+      account,
+    } as never)
 
     const receipt = await sendRawTransactionSync(client, {
       serializedTransaction: serialized as never,
     })
 
     if (receipt.status !== 'success')
-      throw new Error(`${functionName} transaction reverted: ${receipt.transactionHash}`)
+      throw new Error(
+        `${functionName} transaction reverted: ${receipt.transactionHash}`
+      )
 
     return receipt.transactionHash
   }
@@ -247,7 +264,9 @@ export function createReclaimScope(
 
     const closeRequestedAt = Number(channel.closeRequestedAt)
     const closeRequested = closeRequestedAt !== 0
-    const readyAt = closeRequested ? closeRequestedAt + Number(await readGrace()) : undefined
+    const readyAt = closeRequested
+      ? closeRequestedAt + Number(await readGrace())
+      : undefined
 
     return {
       finalized: channel.finalized,
@@ -255,7 +274,9 @@ export function createReclaimScope(
       closeRequestedAt,
       readyAt,
       ready:
-        readyAt !== undefined && Math.floor(Date.now() / 1000) >= readyAt && !channel.finalized,
+        readyAt !== undefined &&
+        Math.floor(Date.now() / 1000) >= readyAt &&
+        !channel.finalized,
       deposit: channel.deposit,
       settled: channel.settled,
       refundable: channel.deposit - channel.settled,
@@ -283,7 +304,8 @@ export function createReclaimScope(
         throw new Error(
           `Channel ${channelId} has no pending close. Call requestClose() first, then withdraw() after the grace period.`
         )
-      if (!state.ready) throw new ChannelNotReadyError(channelId, state.readyAt!)
+      if (!state.ready)
+        throw new ChannelNotReadyError(channelId, state.readyAt!)
       return send('withdraw')
     },
   }

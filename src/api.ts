@@ -18,7 +18,10 @@ export class InndxClient {
 
   constructor(private readonly config: ClientConfig) {
     this.account = privateKeyToAccount(config.walletKey)
-    this.http = new BaseHttpClient(config, buildChargeFetch(config, this.account))
+    this.http = new BaseHttpClient(
+      config,
+      buildChargeFetch(config, this.account)
+    )
   }
 
   ping(init?: RequestInit): Promise<PingResponse> {

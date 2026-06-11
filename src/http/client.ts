@@ -41,7 +41,9 @@ export interface ClientConfig {
   feePayerUrl?: string
 
   /** Advanced: full control over the viem client per chain id. Overrides `rpcUrl(s)`/`feePayerUrl`. */
-  getClient?: (parameters: { chainId?: number | undefined }) => Client | Promise<Client>
+  getClient?: (parameters: {
+    chainId?: number | undefined
+  }) => Client | Promise<Client>
   /** Advanced: a prebuilt viem client used for every chain id. */
   client?: Client
 
