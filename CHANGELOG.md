@@ -1,6 +1,12 @@
 # Changelog
 
 ---
+## [0.2.1](https://github.com/inndx-io/typescript-sdk/-/compare/0.2.0...0.2.1) - 2026-06-11
+
+### Bug Fixes
+
+- Make wallet key optional for public clients  - ([232bdaf](https://github.com/inndx-io/typescript-sdk/-/commit/232bdafbf852c80a9cf371b173ce6f36e988f2fb)) - Timothy Pogue
+---
 ## [0.2.0](https://github.com/inndx-io/typescript-sdk/-/compare/0.1.2...0.2.0) - 2026-06-11
 
 ### Features
