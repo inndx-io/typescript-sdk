@@ -1,9 +1,8 @@
-import { privateKeyToAccount } from 'viem/accounts'
-
 import { ScrapeClient } from '@/clients/scrape'
 import { BaseHttpClient, type ClientConfig } from '@/http/client'
 import { createReclaimScope, type ReclaimScope } from '@/http/reclaim'
 import { SessionScope } from '@/http/session'
+import { resolveSigner } from '@/http/signer'
 import { buildChargeFetch, buildSessionManager } from '@/http/transports'
 import { type PingResponse, PingResponseSchema } from '@/types/common/ping'
 
@@ -13,15 +12,12 @@ export class InndxSessionScope extends SessionScope {
 }
 
 export class InndxClient {
-  private readonly account
+  private readonly signer
   private readonly http: BaseHttpClient
 
   constructor(private readonly config: ClientConfig) {
-    this.account = privateKeyToAccount(config.walletKey)
-    this.http = new BaseHttpClient(
-      config,
-      buildChargeFetch(config, this.account)
-    )
+    this.signer = resolveSigner(config)
+    this.http = new BaseHttpClient(config, buildChargeFetch(config, this.signer))
   }
 
   ping(init?: RequestInit): Promise<PingResponse> {
@@ -30,7 +26,7 @@ export class InndxClient {
 
   /** Opens a session scope for session-billed endpoints. Remember to `close()` it (or use `await using`). */
   session(opts?: { maxDeposit?: string }): InndxSessionScope {
-    const manager = buildSessionManager(this.config, this.account, opts)
+    const manager = buildSessionManager(this.config, this.signer, opts)
 
     return new InndxSessionScope(
       manager,
@@ -54,7 +50,7 @@ export class InndxClient {
     escrowContract?: `0x${string}`
     chainId?: number
   }): ReclaimScope {
-    return createReclaimScope(this.config, this.account, params)
+    return createReclaimScope(this.config, this.signer, params)
   }
 
   /** Runs `callback` within a session scope, settling the channel even if `callback` throws. */
