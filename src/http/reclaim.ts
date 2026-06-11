@@ -236,7 +236,11 @@ export function createReclaimScope(
   const call = {
     to: escrowContract,
     data: (functionName: 'requestClose' | 'withdraw') =>
-      encodeFunctionData({ abi: escrowReclaimAbi, functionName, args: [channelId] }),
+      encodeFunctionData({
+        abi: escrowReclaimAbi,
+        functionName,
+        args: [channelId],
+      }),
   }
 
   /** Signs locally and submits the reclaim transaction (static account). */
@@ -291,7 +295,9 @@ export function createReclaimScope(
     const receipt = await waitForTransactionReceipt(client, { hash })
 
     if (receipt.status !== 'success')
-      throw new Error(`${functionName} transaction reverted: ${receipt.transactionHash}`)
+      throw new Error(
+        `${functionName} transaction reverted: ${receipt.transactionHash}`
+      )
 
     return receipt.transactionHash
   }

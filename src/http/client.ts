@@ -35,7 +35,7 @@ export interface ClientConfig {
    * `getClient`/`client`/`rpcUrl(s)`. One signer only.
    */
   getConnectorClient?: (parameters: {
-    chainId?: number
+    chainId?: number | undefined
   }) => Promise<Client> | Client
   /** Optional list of origins that are allowed to accept payments. */
   acceptPaymentOrigins?: string[]

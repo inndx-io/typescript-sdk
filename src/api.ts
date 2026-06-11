@@ -17,7 +17,10 @@ export class InndxClient {
 
   constructor(private readonly config: ClientConfig) {
     this.signer = resolveSigner(config)
-    this.http = new BaseHttpClient(config, buildChargeFetch(config, this.signer))
+    this.http = new BaseHttpClient(
+      config,
+      buildChargeFetch(config, this.signer)
+    )
   }
 
   ping(init?: RequestInit): Promise<PingResponse> {

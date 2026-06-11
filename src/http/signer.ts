@@ -5,7 +5,7 @@ import type { ClientConfig } from '@/http/client'
 
 /** A connector accessor that yields an account-bearing client (wagmi's `getConnectorClient`). */
 export type ConnectorClientFn = (parameters: {
-  chainId?: number
+  chainId?: number | undefined
 }) => Promise<Client> | Client
 
 /**
