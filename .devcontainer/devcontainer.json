@@ -1,21 +1,21 @@
 {
   "name": "inndx-io-typescript-sdk",
   "build": {
-      "dockerfile": "devcontainer.Dockerfile",
-      "context": "..",
-		"args": {
-			"VARIANT": "24-bookworm"
-		}
+    "dockerfile": "devcontainer.Dockerfile",
+    "context": "..",
+    "args": {
+      "VARIANT": "24-bookworm"
+    }
   },
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"esbenp.prettier-vscode",
-				"dbaeumer.vscode-eslint",
-				"ms-vscode.vscode-typescript-next"
-			]
-		}
-	},
-	"postCreateCommand": "prek install --install-hooks && pnpm install",
-	"remoteUser": "dev"
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "ms-vscode.vscode-typescript-next"
+      ]
+    }
+  },
+  "postCreateCommand": "prek install --install-hooks && pnpm install",
+  "remoteUser": "dev"
 }

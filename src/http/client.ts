@@ -30,6 +30,9 @@ export interface ClientConfig {
   /** Default escrow cap for sessions, in human units (e.g. "10"). Overridable per `client.session({ maxDeposit })`. */
   maxDeposit?: string
 
+  /** Chain id the client targets. Required for `reclaimSession` without a server; sessions otherwise infer it from the challenge. */
+  chainId?: number
+
   /** RPC endpoint applied to every known chain. Use `rpcUrls` for per-chain control. */
   rpcUrl?: string
   /** Per-chain-id RPC endpoints. */
@@ -38,7 +41,9 @@ export interface ClientConfig {
   feePayerUrl?: string
 
   /** Advanced: full control over the viem client per chain id. Overrides `rpcUrl(s)`/`feePayerUrl`. */
-  getClient?: (parameters: { chainId?: number | undefined }) => Client | Promise<Client>
+  getClient?: (parameters: {
+    chainId?: number | undefined
+  }) => Client | Promise<Client>
   /** Advanced: a prebuilt viem client used for every chain id. */
   client?: Client
 

@@ -22,7 +22,9 @@
   },
   "scripts": {
     "lint": "biome check .",
-    "format": "biome format . --write",
+    "lint:fix": "biome check . --write",
+    "format": "biome format .",
+    "format:fix": "biome format . --write",
     "build": "tsdown",
     "prepare": "pnpm build",
     "typecheck": "tsc --noEmit",

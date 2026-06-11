@@ -56,6 +56,7 @@ console.log(pong)
 | `baseUrl` | yes | Base URL of the inndx API. |
 | `walletPrivateKey` | yes | Wallet private key in `0x...` hex form. Used to sign payments. |
 | `maxDeposit` | for sessions | Default escrow cap per session, in human units (for example `"10"`). Overridable per `client.session({ maxDeposit })`. |
+| `chainId` | for reclaim | Chain id the client targets. Needed by `reclaimSession` so it can work without the server. Sessions otherwise infer the chain from the server. |
 | `headers` | no | Headers added to every request. |
 | `fetch` | no | Custom `fetch` implementation. |
 | `acceptPaymentOrigins` | no | Origins allowed to receive payments. Defaults to inndx origins. |
@@ -107,6 +108,48 @@ The session scope exposes:
 - `opened` — whether the channel has been opened.
 - `open(options?)` — open the channel eagerly. Normally unnecessary, since the first request opens it.
 - `close()` — settle the channel on-chain and return the receipt, or `undefined` if nothing was opened.
+
+## Reclaiming a stranded channel
+
+A session holds its channel state in memory. If your process exits before you call
+`close()`, the channel's escrow deposit is left on-chain with no in-memory handle to settle
+it. `reclaimSession` recovers those funds directly on-chain, without the server, using a
+forced close.
+
+To use it, persist the channel id (available as `session.channelId` once the channel
+opens) somewhere durable. If you have not pinned `escrowContract` on the client config,
+persist `session.escrowContract` too. Also set `chainId` on the client so reclaim knows
+which network to talk to.
+
+Forced close is a two-step sequence with a grace period (15 minutes) between the steps,
+required by the protocol to give the server a last chance to settle:
+
+```ts
+const reclaim = client.reclaimSession({ channelId })
+
+// Step 1: start the close timer.
+await reclaim.requestClose()
+
+// Step 2: after the grace period, finalize and get the deposit back.
+const state = await reclaim.getState()
+if (state.ready) {
+  await reclaim.withdraw()
+}
+```
+
+The two steps do not need to run in the same process. `requestClose` records the timer
+on-chain, so a completely separate process started later can construct the same
+`reclaimSession({ channelId })`, check `getState()`, and call `withdraw()` once
+`state.ready` is true. Calling `withdraw()` before the grace period elapses throws
+`ChannelNotReadyError`, which carries a `readyAt` timestamp.
+
+`getState()` returns the on-chain channel state, including `deposit`, `settled`,
+`refundable` (what you get back), `closeRequested`, `readyAt`, `ready`, and `finalized`.
+
+Both `requestClose()` and `withdraw()` are idempotent: they return `undefined` instead of
+sending a duplicate transaction if the close was already requested or the channel is
+already finalized. The reclaim transactions are sent by your wallet (the payer), which
+pays gas unless you configured a `feePayerUrl`.
 
 ## Scrape
 

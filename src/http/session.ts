@@ -13,7 +13,9 @@ import type { SessionManager } from '@/http/transports'
 export class SessionScope {
   constructor(
     private readonly manager: SessionManager,
-    protected readonly http: BaseHttpClient
+    protected readonly http: BaseHttpClient,
+    /** Escrow contract this session's channel is opened against, when known from config. */
+    readonly escrowContract?: `0x${string}`
   ) {}
 
   get channelId() {
