@@ -25,6 +25,18 @@ jobs:
         with:
           version: 3.43.3
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
       - name: Lint commit message
         run: |
           pip install gitlint

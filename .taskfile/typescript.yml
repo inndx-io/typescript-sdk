@@ -6,10 +6,20 @@ tasks:
     cmds:
       - pnpm format
 
+  fmt:fix:
+    desc: Format the code and fix issues
+    cmds:
+      - pnpm format:fix
+
   lint:
     desc: Lint the code
     cmds:
       - pnpm lint
+
+  lint:fix:
+    desc: Lint the code and fix issues
+    cmds:
+      - pnpm lint:fix
 
   test:
     desc: Run the tests
