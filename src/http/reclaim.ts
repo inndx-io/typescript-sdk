@@ -1,5 +1,4 @@
 import {
-  type Account,
   type Client,
   createClient,
   encodeFunctionData,
@@ -10,12 +9,15 @@ import {
   prepareTransactionRequest,
   readContract,
   sendRawTransactionSync,
+  sendTransaction,
   signTransaction,
+  waitForTransactionReceipt,
 } from 'viem/actions'
-import { withFeePayer } from 'viem/tempo'
+import { withRelay } from 'viem/tempo'
 import { tempo as tempoChain } from 'viem/tempo/chains'
 
 import type { ClientConfig } from '@/http/client'
+import type { ResolvedSigner } from '@/http/signer'
 
 /**
  * The inndx gateway's escrow is mppx's `TempoStreamChannel`, whose mutating
@@ -164,19 +166,19 @@ function resolveEscrow(
 }
 
 /**
- * Builds a viem client for the reclaim calls. Unlike `buildGetClient`, this always
- * returns a client (falling back to the default RPC for the chain), since reclaim must
- * work without a server challenge. The account is passed per-action, mirroring mppx.
+ * Resolves the viem client for the reclaim calls. A connector signer supplies its own
+ * account-bearing client, which is used for both reads and writes. Otherwise this builds a
+ * client (falling back to the default RPC for the chain), since reclaim must work without a
+ * server challenge, and the static account is passed per-action, mirroring mppx.
  */
-function resolveClient(config: ClientConfig, chainId: number): Client {
-  if (config.getClient) {
-    const client = config.getClient({ chainId })
+function resolveClient(
+  config: ClientConfig,
+  signer: ResolvedSigner,
+  chainId: number
+): Promise<Client> | Client {
+  if (signer.kind === 'connector') return signer.getClient({ chainId })
 
-    if (client instanceof Promise)
-      throw new Error('reclaimSession requires a synchronous `getClient`.')
-
-    return client
-  }
+  if (config.getClient) return config.getClient({ chainId })
 
   if (config.client) return config.client
 
@@ -187,27 +189,32 @@ function resolveClient(config: ClientConfig, chainId: number): Client {
   return createClient({
     chain: { ...tempoChain, id: chainId },
     transport: config.feePayerUrl
-      ? withFeePayer(transport, http(config.feePayerUrl))
+      ? withRelay(transport, http(config.feePayerUrl))
       : transport,
   })
 }
 
 export function createReclaimScope(
   config: ClientConfig,
-  account: Account,
+  signer: ResolvedSigner,
   params: { channelId: Hex; escrowContract?: Hex; chainId?: number }
 ): ReclaimScope {
   const chainId = resolveChainId(config, params.chainId)
   const escrowContract = resolveEscrow(config, chainId, params.escrowContract)
   const channelId = params.channelId
-  const client = resolveClient(config, chainId)
   const feeToken = DEFAULT_CURRENCY[chainId]
 
+  let cachedClient: Client | undefined
   let cachedGrace: bigint | undefined
+
+  async function getClient(): Promise<Client> {
+    cachedClient ??= await resolveClient(config, signer, chainId)
+    return cachedClient
+  }
 
   async function readGrace(): Promise<bigint> {
     if (cachedGrace === undefined) {
-      cachedGrace = await readContract(client, {
+      cachedGrace = await readContract(await getClient(), {
         address: escrowContract,
         abi: escrowReclaimAbi,
         functionName: 'CLOSE_GRACE_PERIOD',
@@ -218,7 +225,7 @@ export function createReclaimScope(
   }
 
   async function readChannel() {
-    return readContract(client, {
+    return readContract(await getClient(), {
       address: escrowContract,
       abi: escrowReclaimAbi,
       functionName: 'getChannel',
@@ -226,25 +233,34 @@ export function createReclaimScope(
     })
   }
 
-  async function send(functionName: 'requestClose' | 'withdraw'): Promise<Hex> {
+  const call = {
+    to: escrowContract,
+    data: (functionName: 'requestClose' | 'withdraw') =>
+      encodeFunctionData({
+        abi: escrowReclaimAbi,
+        functionName,
+        args: [channelId],
+      }),
+  }
+
+  /** Signs locally and submits the reclaim transaction (static account). */
+  async function sendLocal(
+    functionName: 'requestClose' | 'withdraw'
+  ): Promise<Hex> {
+    if (signer.kind !== 'account')
+      throw new Error('sendLocal requires a static account.')
+
+    const client = await getClient()
+
     const prepared = await prepareTransactionRequest(client, {
-      account,
-      calls: [
-        {
-          to: escrowContract,
-          data: encodeFunctionData({
-            abi: escrowReclaimAbi,
-            functionName,
-            args: [channelId],
-          }),
-        },
-      ],
+      account: signer.account,
+      calls: [{ to: call.to, data: call.data(functionName) }],
       ...(feeToken ? { feeToken } : {}),
     } as never)
 
     const serialized = await signTransaction(client, {
       ...prepared,
-      account,
+      account: signer.account,
     } as never)
 
     const receipt = await sendRawTransactionSync(client, {
@@ -257,6 +273,39 @@ export function createReclaimScope(
       )
 
     return receipt.transactionHash
+  }
+
+  /** Submits the reclaim transaction through the connector's wallet (JSON-RPC account). */
+  async function sendConnector(
+    functionName: 'requestClose' | 'withdraw'
+  ): Promise<Hex> {
+    const client = await getClient()
+
+    if (!client.account)
+      throw new Error(
+        'The connector client has no account. Connect a wallet before calling reclaimSession.'
+      )
+
+    const hash = await sendTransaction(client, {
+      account: client.account,
+      calls: [{ to: call.to, data: call.data(functionName) }],
+      ...(feeToken ? { feeToken } : {}),
+    } as never)
+
+    const receipt = await waitForTransactionReceipt(client, { hash })
+
+    if (receipt.status !== 'success')
+      throw new Error(
+        `${functionName} transaction reverted: ${receipt.transactionHash}`
+      )
+
+    return receipt.transactionHash
+  }
+
+  function send(functionName: 'requestClose' | 'withdraw'): Promise<Hex> {
+    return signer.kind === 'connector'
+      ? sendConnector(functionName)
+      : sendLocal(functionName)
   }
 
   async function toState(): Promise<ReclaimChannelState> {

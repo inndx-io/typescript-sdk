@@ -1,5 +1,5 @@
 import qs from 'qs'
-import type { Client } from 'viem'
+import type { Account, Client } from 'viem'
 import { type ZodType, z } from 'zod'
 
 import { ApiError } from '@/http/errors'
@@ -22,8 +22,21 @@ export interface ClientConfig {
   /** Optional custom fetch implementation. */
   fetch?: typeof globalThis.fetch
 
-  /** Wallet private key in hexadecimal format. */
-  walletKey: `0x${string}`
+  /**
+   * Wallet private key in hexadecimal format. One signer only: supply exactly one of
+   * `walletKey`, `account`, or `getConnectorClient`.
+   */
+  walletKey?: `0x${string}`
+  /** A prebuilt viem account (passkey/WebCrypto/custom signer). One signer only. */
+  account?: Account
+  /**
+   * Wagmi-style connector accessor for browser signing, shaped like a partially applied
+   * `getConnectorClient(wagmiConfig)`. Doubles as the network client, overriding
+   * `getClient`/`client`/`rpcUrl(s)`. One signer only.
+   */
+  getConnectorClient?: (parameters: {
+    chainId?: number | undefined
+  }) => Promise<Client> | Client
   /** Optional list of origins that are allowed to accept payments. */
   acceptPaymentOrigins?: string[]
 

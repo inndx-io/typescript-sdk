@@ -54,7 +54,9 @@ console.log(pong)
 | Option | Required | Description |
 | --- | --- | --- |
 | `baseUrl` | yes | Base URL of the inndx API. |
-| `walletPrivateKey` | yes | Wallet private key in `0x...` hex form. Used to sign payments. |
+| `walletKey` | a signer | Wallet private key in `0x...` hex form. Used to sign payments. Server side. |
+| `account` | a signer | A prebuilt viem account (passkey/WebCrypto/custom signer). |
+| `getConnectorClient` | a signer | Wagmi-style connector accessor for browser signing. See [Browser and wagmi](#browser-and-wagmi). |
 | `maxDeposit` | for sessions | Default escrow cap per session, in human units (for example `"10"`). Overridable per `client.session({ maxDeposit })`. |
 | `chainId` | for reclaim | Chain id the client targets. Needed by `reclaimSession` so it can work without the server. Sessions otherwise infer the chain from the server. |
 | `headers` | no | Headers added to every request. |
@@ -66,6 +68,26 @@ console.log(pong)
 | `getClient` | no | Advanced. Full control over the viem client per chain id. |
 | `client` | no | Advanced. A prebuilt viem client used for every chain id. |
 | `escrowContract` | no | Advanced. Escrow contract override. Normally derived from the server challenge. |
+
+Supply exactly one signer: `walletKey`, `account`, or `getConnectorClient`. Passing more than one, or none, throws at construction.
+
+## Browser and wagmi
+
+In the browser you should never hold a private key. Instead, sign through a connected wallet using [wagmi](https://wagmi.sh). Pass its `getConnectorClient` action so the SDK resolves the signing account from the wallet:
+
+```ts
+import { InndxClient } from '@inndx-io/sdk'
+import { getConnectorClient } from 'wagmi/actions'
+import { wagmiConfig } from './wagmi'
+
+const client = new InndxClient({
+  baseUrl: 'https://api.inndx.io',
+  getConnectorClient: (parameters) => getConnectorClient(wagmiConfig, parameters),
+  maxDeposit: '10',
+})
+```
+
+The connector client carries both the wallet account and the network transport, so `getConnectorClient` doubles as the network client and takes precedence over `getClient`/`client`/`rpcUrl(s)`. Charges, sessions, and reclaim all prompt the wallet to sign rather than signing locally. Reclaim prompts twice, once for `requestClose` and once later for `withdraw`.
 
 ## Sessions
 
@@ -102,12 +124,12 @@ If you do not use `withSession` or `await using`, call `session.close()` yoursel
 
 The session scope exposes:
 
-- `scrape` — the scrape client (see below).
-- `channelId` — the channel id once opened, otherwise `undefined`.
-- `cumulative` — the cumulative amount spent so far.
-- `opened` — whether the channel has been opened.
-- `open(options?)` — open the channel eagerly. Normally unnecessary, since the first request opens it.
-- `close()` — settle the channel on-chain and return the receipt, or `undefined` if nothing was opened.
+- `scrape`: the scrape client (see below).
+- `channelId`: the channel id once opened, otherwise `undefined`.
+- `cumulative`: the cumulative amount spent so far.
+- `opened`: whether the channel has been opened.
+- `open(options?)`: open the channel eagerly. Normally unnecessary, since the first request opens it.
+- `close()`: settle the channel on-chain and return the receipt, or `undefined` if nothing was opened.
 
 ## Reclaiming a stranded channel
 

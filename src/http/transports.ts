@@ -1,9 +1,10 @@
 import { Fetch, tempo } from 'mppx/client'
-import { type Account, type Client, createClient, http } from 'viem'
-import { withFeePayer } from 'viem/tempo'
+import { type Client, createClient, http } from 'viem'
+import { withRelay } from 'viem/tempo'
 import { tempo as tempoChain } from 'viem/tempo/chains'
 
 import type { ClientConfig, FetchLike } from '@/http/client'
+import type { ResolvedSigner } from '@/http/signer'
 
 /** The mppx session manager type, derived since it has no stable export path. */
 export type SessionManager = ReturnType<typeof tempo.session>
@@ -45,7 +46,7 @@ function buildGetClient(config: ClientConfig): GetClient | undefined {
     return createClient({
       chain: { ...tempoChain, id: chainId ?? tempoChain.id },
       transport: config.feePayerUrl
-        ? withFeePayer(transport, http(config.feePayerUrl))
+        ? withRelay(transport, http(config.feePayerUrl))
         : transport,
     })
   }
@@ -58,15 +59,26 @@ function networkOptions(config: ClientConfig) {
 }
 
 /**
+ * Turns the resolved signer into mppx method options. A static account signs locally, so it
+ * is passed alongside any network override. A connector supplies the client itself, from which
+ * mppx resolves the account, so it overrides the network override and no `account` is passed.
+ */
+function signerOptions(config: ClientConfig, signer: ResolvedSigner) {
+  return signer.kind === 'account'
+    ? { account: signer.account, ...networkOptions(config) }
+    : { getClient: signer.getClient }
+}
+
+/**
  * The default transport for the whole client: wraps the user's fetch with charge
  * handling so every charge-billed endpoint settles per request with no ceremony.
  */
 export function buildChargeFetch(
   config: ClientConfig,
-  account: Account
+  signer: ResolvedSigner
 ): FetchLike {
   return Fetch.from({
-    methods: [tempo.charge({ account, ...networkOptions(config) })],
+    methods: [tempo.charge(signerOptions(config, signer))],
     fetch: config.fetch ?? globalThis.fetch,
     acceptPaymentPolicy: {
       origins: config.acceptPaymentOrigins ?? DEFAULT_ACCEPT_PAYMENT_ORIGINS,
@@ -80,7 +92,7 @@ export function buildChargeFetch(
  */
 export function buildSessionManager(
   config: ClientConfig,
-  account: Account,
+  signer: ResolvedSigner,
   sessionConfig: { maxDeposit?: string } = {}
 ): SessionManager {
   const maxDeposit = sessionConfig.maxDeposit ?? config.maxDeposit
@@ -91,10 +103,9 @@ export function buildSessionManager(
     )
 
   return tempo.session({
-    account,
     fetch: config.fetch ?? globalThis.fetch,
     maxDeposit,
-    ...networkOptions(config),
+    ...signerOptions(config, signer),
     ...(config.escrowContract ? { escrowContract: config.escrowContract } : {}),
   })
 }
