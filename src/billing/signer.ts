@@ -1,27 +1,19 @@
 import type { Account, Client } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
-import type { ClientConfig } from '@/http/client'
+import type { BillingConfig } from '@/billing/config'
 
 /** A connector accessor that yields an account-bearing client (wagmi's `getConnectorClient`). */
 export type ConnectorClientFn = (parameters: {
   chainId?: number | undefined
 }) => Promise<Client> | Client
 
-/**
- * The signer resolved from a `ClientConfig`, in one of two shapes: a static account (from a
- * private key or a prebuilt viem account) that signs locally, or a connector that yields an
- * account-bearing client whose wallet signs.
- */
 export type ResolvedSigner =
   | { kind: 'account'; account: Account }
   | { kind: 'connector'; getClient: ConnectorClientFn }
 
-/**
- * Resolves the single signer a client was configured with. Exactly one of `walletKey`,
- * `account`, or `getConnectorClient` must be supplied; anything else throws.
- */
-export function resolveSigner(config: ClientConfig): ResolvedSigner {
+/** Exactly one of `walletKey`, `account`, or `getConnectorClient` must be supplied; anything else throws. */
+export function resolveSigner(config: BillingConfig): ResolvedSigner {
   const provided = [
     config.walletKey !== undefined,
     config.account !== undefined,

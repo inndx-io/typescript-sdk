@@ -1,41 +1,29 @@
 import { ScrapeClient } from '@/clients/scrape'
+import type { BillingConfig } from '@/billing/config'
+import { createReclaimScope, type ReclaimScope } from '@/billing/reclaim'
+import { Sessions } from '@/billing/session'
+import { resolveSigner } from '@/billing/signer'
+import { buildChargeFetch } from '@/billing/transports'
 import { BaseHttpClient, type ClientConfig } from '@/http/client'
-import { createReclaimScope, type ReclaimScope } from '@/http/reclaim'
-import { SessionScope } from '@/http/session'
-import { resolveSigner } from '@/http/signer'
-import { buildChargeFetch, buildSessionManager } from '@/http/transports'
 import { type PingResponse, PingResponseSchema } from '@/types/common/ping'
 
-/** A session scope carrying inndx's session-billed resource clients. */
-export class InndxSessionScope extends SessionScope {
-  readonly scrape = new ScrapeClient(this.http)
-}
+export type InndxConfig = ClientConfig & BillingConfig
 
 export class InndxClient {
   private readonly signer
   private readonly http: BaseHttpClient
 
-  constructor(private readonly config: ClientConfig) {
+  readonly scrape: ScrapeClient
+
+  constructor(private readonly config: InndxConfig) {
     this.signer = resolveSigner(config)
-    this.http = new BaseHttpClient(
-      config,
-      buildChargeFetch(config, this.signer)
-    )
+    this.http = new BaseHttpClient(config, buildChargeFetch(config, this.signer))
+
+    this.scrape = new ScrapeClient(new Sessions(config, this.signer))
   }
 
   ping(init?: RequestInit): Promise<PingResponse> {
     return this.http.get(this.http.buildUrl('/'), PingResponseSchema, init)
-  }
-
-  /** Opens a session scope for session-billed endpoints. Remember to `close()` it (or use `await using`). */
-  session(opts?: { maxDeposit?: string }): InndxSessionScope {
-    const manager = buildSessionManager(this.config, this.signer, opts)
-
-    return new InndxSessionScope(
-      manager,
-      new BaseHttpClient(this.config, manager.fetch.bind(manager)),
-      this.config.escrowContract
-    )
   }
 
   /**
@@ -54,19 +42,5 @@ export class InndxClient {
     chainId?: number
   }): ReclaimScope {
     return createReclaimScope(this.config, this.signer, params)
-  }
-
-  /** Runs `callback` within a session scope, settling the channel even if `callback` throws. */
-  async withSession<T>(
-    opts: { maxDeposit?: string } | undefined,
-    callback: (scope: InndxSessionScope) => Promise<T>
-  ): Promise<T> {
-    const scope = this.session(opts)
-
-    try {
-      return await callback(scope)
-    } finally {
-      await scope.close()
-    }
   }
 }
