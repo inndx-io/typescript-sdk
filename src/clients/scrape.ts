@@ -1,4 +1,5 @@
-import type { BaseHttpClient } from '@/http/client'
+import type { SessionOptions } from '@/billing/config'
+import { SessionScope, type Sessions } from '@/billing/session'
 import {
   type ScrapeRequest,
   ScrapeRequestSchema,
@@ -7,24 +8,35 @@ import {
 } from '@/types/scrape'
 
 export class ScrapeClient {
-  constructor(private readonly http: BaseHttpClient) {}
+  constructor(private readonly sessions: Sessions) {}
 
-  async scrapeUrl(
-    body: ScrapeRequest,
-    init?: RequestInit
-  ): Promise<ScrapeResponse> {
-    return this.http.post(
-      this.http.buildUrl('/v1/scrape'),
-      ScrapeResponseSchema,
-      body,
-      init,
-      ScrapeRequestSchema
+  /** Opens a session for `scrape_url`. */
+  scrapeUrl(opts?: SessionOptions) {
+    return new SessionScope(
+      this.sessions.open(opts),
+      (
+        http,
+        body: ScrapeRequest,
+        init?: RequestInit
+      ): Promise<ScrapeResponse> =>
+        http.post(
+          http.buildUrl('/v1/scrape'),
+          ScrapeResponseSchema,
+          body,
+          init,
+          ScrapeRequestSchema
+        )
     )
   }
 
-  async scrapeUrlMarkdown(url: string, init?: RequestInit): Promise<string> {
-    return this.http
-      .getRaw(this.http.buildUrl(`/v1/scrape/${url}`), init)
-      .then(response => response.text())
+  /** Opens a session for `scrape_url_markdown`. */
+  scrapeUrlMarkdown(opts?: SessionOptions) {
+    return new SessionScope(
+      this.sessions.open(opts),
+      (http, url: string, init?: RequestInit) =>
+        http
+          .getRaw(http.buildUrl(`/v1/scrape/${url}`), init)
+          .then(r => r.text())
+    )
   }
 }

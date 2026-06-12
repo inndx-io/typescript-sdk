@@ -57,7 +57,7 @@ console.log(pong)
 | `walletKey` | a signer | Wallet private key in `0x...` hex form. Used to sign payments. Server side. |
 | `account` | a signer | A prebuilt viem account (passkey/WebCrypto/custom signer). |
 | `getConnectorClient` | a signer | Wagmi-style connector accessor for browser signing. See [Browser and wagmi](#browser-and-wagmi). |
-| `maxDeposit` | for sessions | Default escrow cap per session, in human units (for example `"10"`). Overridable per `client.session({ maxDeposit })`. |
+| `maxDeposit` | for sessions | Default escrow cap per session, in human units (for example `"10"`). Overridable per session via `SessionOptions`. |
 | `chainId` | for reclaim | Chain id the client targets. Needed by `reclaimSession` so it can work without the server. Sessions otherwise infer the chain from the server. |
 | `headers` | no | Headers added to every request. |
 | `fetch` | no | Custom `fetch` implementation. |
@@ -91,27 +91,37 @@ The connector client carries both the wallet account and the network transport, 
 
 ## Sessions
 
-A session is a payment channel. You open it once, make as many requests as you want against it without waiting on a chain transaction each time, then close it to settle on-chain. Session-billed resources (such as scraping) live on the session scope.
+A session is a payment channel scoped to a single operation. You open it by calling the operation method on a resource client, make as many requests as you want against it without waiting on a chain transaction each time, then close it to settle on-chain.
 
-Use `withSession` to run work in a scope that always settles, even if your code throws:
+Each operation method (such as `scrapeUrl` or `scrapeUrlMarkdown`) is the session opener. It returns a `SessionScope` whose only request method is `call(...)`, typed to match that operation. This means a session opened for scraping can only make scrape requests, which is what the payment channel is scoped to on-chain.
+
+Open a session, call it, close it explicitly:
 
 ```ts
-const markdown = await client.withSession({ maxDeposit: '5' }, async (session) => {
-  const page = await session.scrape.scrapeUrlMarkdown(
-    'https://www.conventionalcommits.org/en/v1.0.0/',
-  )
+const session = client.scrape.scrapeUrlMarkdown({ maxDeposit: '5' })
 
+const page1 = await session.call('https://example.com')
+const page2 = await session.call('https://example.com/about')
+
+const receipt = await session.close()
+```
+
+Use `scope()` to run a block that always settles, even if your code throws:
+
+```ts
+const page = await client.scrape.scrapeUrlMarkdown({ maxDeposit: '5' }).scope(async (session) => {
+  const result = await session.call('https://example.com')
   console.log('spent so far:', session.cumulative)
-  return page
+  return result
 })
 ```
 
-Or manage the scope yourself with `await using`, which closes the channel when the scope exits:
+Use `await using` to settle automatically when the block exits:
 
 ```ts
-await using session = client.session({ maxDeposit: '5' })
+await using session = client.scrape.scrapeUrlMarkdown({ maxDeposit: '5' })
 
-const page = await session.scrape.scrapeUrlMarkdown('https://example.com')
+const page = await session.call('https://example.com')
 const receipt = await session.close()
 
 if (receipt) {
@@ -120,31 +130,37 @@ if (receipt) {
 }
 ```
 
-If you do not use `withSession` or `await using`, call `session.close()` yourself when you are done. A scope owns exactly one channel, and the channel opens lazily on the first request.
+If you do not use `scope()` or `await using`, call `close()` yourself when you are done. A session owns exactly one channel, and the channel opens lazily on the first `call()`.
 
-The session scope exposes:
+### Session options
 
-- `scrape`: the scrape client (see below).
-- `channelId`: the channel id once opened, otherwise `undefined`.
-- `cumulative`: the cumulative amount spent so far.
-- `opened`: whether the channel has been opened.
-- `open(options?)`: open the channel eagerly. Normally unnecessary, since the first request opens it.
-- `close()`: settle the channel on-chain and return the receipt, or `undefined` if nothing was opened.
+Each operation method accepts an optional `SessionOptions` object:
+
+| Option | Description |
+| --- | --- |
+| `maxDeposit` | Escrow cap for this session, in human units (for example `"10"`). Overrides the client-level `maxDeposit`. |
+| `escrowContract` | Escrow contract for this session. Overrides the client-level `escrowContract`. |
+
+### SessionScope properties and methods
+
+| Member | Description |
+| --- | --- |
+| `call(...args)` | Makes a request through the session. Arguments and return type match the operation. |
+| `close()` | Settles the channel on-chain and returns the receipt, or `undefined` if nothing was opened. |
+| `scope(cb)` | Runs `cb(session)`, then settles regardless of outcome. Callback error takes priority. |
+| `channelId` | The channel id once opened, otherwise `undefined`. |
+| `cumulative` | The cumulative amount spent so far. |
+| `opened` | Whether the channel has been opened. |
+| `escrowContract` | The escrow contract this session targets, when set. |
+| `open(options?)` | Opens the channel eagerly. Normally unnecessary since the first `call()` opens it. |
 
 ## Reclaiming a stranded channel
 
-A session holds its channel state in memory. If your process exits before you call
-`close()`, the channel's escrow deposit is left on-chain with no in-memory handle to settle
-it. `reclaimSession` recovers those funds directly on-chain, without the server, using a
-forced close.
+A session holds its channel state in memory. If your process exits before you call `close()`, the channel's escrow deposit is left on-chain with no in-memory handle to settle it. `reclaimSession` recovers those funds directly on-chain, without the server, using a forced close.
 
-To use it, persist the channel id (available as `session.channelId` once the channel
-opens) somewhere durable. If you have not pinned `escrowContract` on the client config,
-persist `session.escrowContract` too. Also set `chainId` on the client so reclaim knows
-which network to talk to.
+To use it, persist the channel id (available as `session.channelId` once the channel opens) somewhere durable. If you have not pinned `escrowContract` on the client config, persist `session.escrowContract` too. Also set `chainId` on the client so reclaim knows which network to talk to.
 
-Forced close is a two-step sequence with a grace period (15 minutes) between the steps,
-required by the protocol to give the server a last chance to settle:
+Forced close is a two-step sequence with a grace period (15 minutes) between the steps, required by the protocol to give the server a last chance to settle:
 
 ```ts
 const reclaim = client.reclaimSession({ channelId })
@@ -159,34 +175,28 @@ if (state.ready) {
 }
 ```
 
-The two steps do not need to run in the same process. `requestClose` records the timer
-on-chain, so a completely separate process started later can construct the same
-`reclaimSession({ channelId })`, check `getState()`, and call `withdraw()` once
-`state.ready` is true. Calling `withdraw()` before the grace period elapses throws
-`ChannelNotReadyError`, which carries a `readyAt` timestamp.
+The two steps do not need to run in the same process. `requestClose` records the timer on-chain, so a completely separate process started later can construct the same `reclaimSession({ channelId })`, check `getState()`, and call `withdraw()` once `state.ready` is true. Calling `withdraw()` before the grace period elapses throws `ChannelNotReadyError`, which carries a `readyAt` timestamp.
 
-`getState()` returns the on-chain channel state, including `deposit`, `settled`,
-`refundable` (what you get back), `closeRequested`, `readyAt`, `ready`, and `finalized`.
+`getState()` returns the on-chain channel state, including `deposit`, `settled`, `refundable` (what you get back), `closeRequested`, `readyAt`, `ready`, and `finalized`.
 
-Both `requestClose()` and `withdraw()` are idempotent: they return `undefined` instead of
-sending a duplicate transaction if the close was already requested or the channel is
-already finalized. The reclaim transactions are sent by your wallet (the payer), which
-pays gas unless you configured a `feePayerUrl`.
+Both `requestClose()` and `withdraw()` are idempotent: they return `undefined` instead of sending a duplicate transaction if the close was already requested or the channel is already finalized. The reclaim transactions are sent by your wallet (the payer), which pays gas unless you configured a `feePayerUrl`.
 
 ## Scrape
 
-The scrape client is available on a session scope as `session.scrape`.
+`client.scrape` exposes the scraping operations. Each method opens a session for that operation and returns a `SessionScope`.
 
 Get a page as markdown:
 
 ```ts
-const markdown = await session.scrape.scrapeUrlMarkdown('https://example.com')
+const session = client.scrape.scrapeUrlMarkdown({ maxDeposit: '5' })
+const markdown = await session.call('https://example.com')
+await session.close()
 ```
 
 Pass request options through (for example a header):
 
 ```ts
-const markdown = await session.scrape.scrapeUrlMarkdown('https://example.com', {
+const markdown = await session.call('https://example.com', {
   headers: { 'X-Scrape-Proxy': 'isp' },
 })
 ```
@@ -194,7 +204,9 @@ const markdown = await session.scrape.scrapeUrlMarkdown('https://example.com', {
 For structured input and control over formats and other options, use `scrapeUrl`:
 
 ```ts
-const result = await session.scrape.scrapeUrl({
+const session = client.scrape.scrapeUrl({ maxDeposit: '5' })
+
+const result = await session.call({
   url: 'https://example.com',
   formats: [{ kind: 'markdown' }],
   proxy: 'isp',
@@ -204,6 +216,8 @@ const result = await session.scrape.scrapeUrl({
 for (const item of result.results) {
   if (item.kind === 'markdown') console.log(item.content)
 }
+
+await session.close()
 ```
 
 `scrapeUrl` returns `{ url, results }`, where each result is one of `markdown`, `html`, `json`, or `binary` (binary content is decoded from base64 for you).

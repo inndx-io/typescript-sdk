@@ -16,8 +16,8 @@ import {
 import { withRelay } from 'viem/tempo'
 import { tempo as tempoChain } from 'viem/tempo/chains'
 
-import type { ClientConfig } from '@/http/client'
-import type { ResolvedSigner } from '@/http/signer'
+import type { BillingConfig } from '@/billing/config'
+import type { ResolvedSigner } from '@/billing/signer'
 
 /**
  * The inndx gateway's escrow is mppx's `TempoStreamChannel`, whose mutating
@@ -148,12 +148,12 @@ export class ChannelNotReadyError extends Error {
   }
 }
 
-function resolveChainId(config: ClientConfig, override?: number): number {
+function resolveChainId(config: BillingConfig, override?: number): number {
   return override ?? config.chainId ?? CHAIN_IDS.mainnet
 }
 
 function resolveEscrow(
-  config: ClientConfig,
+  config: BillingConfig,
   chainId: number,
   override?: Hex
 ): Hex {
@@ -165,14 +165,9 @@ function resolveEscrow(
   return escrow
 }
 
-/**
- * Resolves the viem client for the reclaim calls. A connector signer supplies its own
- * account-bearing client, which is used for both reads and writes. Otherwise this builds a
- * client (falling back to the default RPC for the chain), since reclaim must work without a
- * server challenge, and the static account is passed per-action, mirroring mppx.
- */
+// Reclaim must work without a server challenge, so this builds its own client from config rather than using a session transport.
 function resolveClient(
-  config: ClientConfig,
+  config: BillingConfig,
   signer: ResolvedSigner,
   chainId: number
 ): Promise<Client> | Client {
@@ -195,7 +190,7 @@ function resolveClient(
 }
 
 export function createReclaimScope(
-  config: ClientConfig,
+  config: BillingConfig,
   signer: ResolvedSigner,
   params: { channelId: Hex; escrowContract?: Hex; chainId?: number }
 ): ReclaimScope {
@@ -243,7 +238,6 @@ export function createReclaimScope(
       }),
   }
 
-  /** Signs locally and submits the reclaim transaction (static account). */
   async function sendLocal(
     functionName: 'requestClose' | 'withdraw'
   ): Promise<Hex> {
@@ -275,7 +269,6 @@ export function createReclaimScope(
     return receipt.transactionHash
   }
 
-  /** Submits the reclaim transaction through the connector's wallet (JSON-RPC account). */
   async function sendConnector(
     functionName: 'requestClose' | 'withdraw'
   ): Promise<Hex> {
