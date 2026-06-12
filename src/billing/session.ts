@@ -1,7 +1,7 @@
-import { BaseHttpClient, type ClientConfig } from '@/http/client'
 import type { BillingConfig, SessionOptions } from '@/billing/config'
 import type { ResolvedSigner } from '@/billing/signer'
 import { buildSessionManager, type SessionManager } from '@/billing/transports'
+import { BaseHttpClient, type ClientConfig } from '@/http/client'
 
 /** The session core: one channel's manager, its session-scoped http client, and the escrow it targets. */
 export class Session {
@@ -16,7 +16,10 @@ export class Session {
 export class SessionScope<TArgs extends unknown[], TRes> {
   constructor(
     private readonly core: Session,
-    private readonly send: (http: BaseHttpClient, ...args: TArgs) => Promise<TRes>
+    private readonly send: (
+      http: BaseHttpClient,
+      ...args: TArgs
+    ) => Promise<TRes>
   ) {}
 
   get channelId() {

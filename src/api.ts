@@ -1,9 +1,9 @@
-import { ScrapeClient } from '@/clients/scrape'
 import type { BillingConfig } from '@/billing/config'
 import { createReclaimScope, type ReclaimScope } from '@/billing/reclaim'
 import { Sessions } from '@/billing/session'
 import { resolveSigner } from '@/billing/signer'
 import { buildChargeFetch } from '@/billing/transports'
+import { ScrapeClient } from '@/clients/scrape'
 import { BaseHttpClient, type ClientConfig } from '@/http/client'
 import { type PingResponse, PingResponseSchema } from '@/types/common/ping'
 
@@ -17,7 +17,10 @@ export class InndxClient {
 
   constructor(private readonly config: InndxConfig) {
     this.signer = resolveSigner(config)
-    this.http = new BaseHttpClient(config, buildChargeFetch(config, this.signer))
+    this.http = new BaseHttpClient(
+      config,
+      buildChargeFetch(config, this.signer)
+    )
 
     this.scrape = new ScrapeClient(new Sessions(config, this.signer))
   }

@@ -14,7 +14,11 @@ export class ScrapeClient {
   scrapeUrl(opts?: SessionOptions) {
     return new SessionScope(
       this.sessions.open(opts),
-      (http, body: ScrapeRequest, init?: RequestInit): Promise<ScrapeResponse> =>
+      (
+        http,
+        body: ScrapeRequest,
+        init?: RequestInit
+      ): Promise<ScrapeResponse> =>
         http.post(
           http.buildUrl('/v1/scrape'),
           ScrapeResponseSchema,

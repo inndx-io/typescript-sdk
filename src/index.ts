@@ -1,5 +1,5 @@
 export { InndxClient, type InndxConfig } from '@/api'
-export { type BillingConfig, type SessionOptions } from '@/billing/config'
+export type { BillingConfig, SessionOptions } from '@/billing/config'
 export {
   ChannelNotReadyError,
   type ReclaimChannelState,
