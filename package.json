@@ -1,6 +1,6 @@
 {
   "name": "@inndx-io/sdk",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Typescript client SDK for inndx",
   "type": "module",
   "main": "dist/index.mjs",

@@ -1,6 +1,12 @@
 # Changelog
 
 ---
+## [0.3.1](https://github.com/inndx-io/typescript-sdk/-/compare/0.3.0...0.3.1) - 2026-06-13
+
+### Bug Fixes
+
+- Support structured params for scrapeUrlMarkdown operation - ([a8a3cd9](https://github.com/inndx-io/typescript-sdk/-/commit/a8a3cd99edaace8227a99dd6d582b14513df7f54)) - Timothy Pogue
+---
 ## [0.3.0](https://github.com/inndx-io/typescript-sdk/-/compare/0.2.1...0.3.0) - 2026-06-12
 
 ### Features
