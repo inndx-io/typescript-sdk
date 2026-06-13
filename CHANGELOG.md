@@ -1,6 +1,12 @@
 # Changelog
 
 ---
+## [0.3.2](https://github.com/inndx-io/typescript-sdk/-/compare/0.3.1...0.3.2) - 2026-06-13
+
+### Bug Fixes
+
+- Timeout seconds header typo in scrape url markdown params - ([57e8e81](https://github.com/inndx-io/typescript-sdk/-/commit/57e8e81c553c01d863c65dab2fcac0b026377d30)) - Timothy Pogue
+---
 ## [0.3.1](https://github.com/inndx-io/typescript-sdk/-/compare/0.3.0...0.3.1) - 2026-06-13
 
 ### Bug Fixes
