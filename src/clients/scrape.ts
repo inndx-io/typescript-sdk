@@ -40,7 +40,7 @@ export class ScrapeClient {
             ...init,
             headers: {
               ...init?.headers,
-              ...(params?.timeout_seconds ? { 'X-Scrape-Timeout': params.timeout_seconds.toString() } : {}),
+              ...(params?.timeout_seconds ? { 'X-Scrape-Timeout-Seconds': params.timeout_seconds.toString() } : {}),
               ...(params?.proxy ? { 'X-Scrape-Proxy': JSON.stringify(params.proxy) } : {}),
               ...(params?.locale ? { 'X-Scrape-Locale': params.locale } : {}),
             }
