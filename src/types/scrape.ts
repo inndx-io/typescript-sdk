@@ -27,6 +27,17 @@ export const ScrapeRequestSchema = z.object({
   proxy: ScrapeProxySchema.nullable().optional(),
   /** Optional timeout for the scrape operation (in seconds) */
   timeout_seconds: z.number().int().nonnegative().nullable().optional(),
+  /** Optional locale to use for the request */
+  locale: z.string().nullable().optional(),
+})
+
+export const ScrapeUrlMarkdownParamsSchema = z.object({
+  /** Optional proxy settings for the scrape operation */
+  proxy: ScrapeProxySchema.nullable().optional(),
+  /** Optional timeout for the scrape operation (in seconds) */
+  timeout_seconds: z.number().int().nonnegative().nullable().optional(),
+  /** Optional locale to use for the request */
+  locale: z.string().nullable().optional(),
 })
 
 const ScrapeResponseMarkdownSchema = z.object({
@@ -69,3 +80,4 @@ export type ScrapeProxy = z.infer<typeof ScrapeProxySchema>
 export type ScrapeRequest = z.infer<typeof ScrapeRequestSchema>
 export type ScrapeResponseResult = z.infer<typeof ScrapeResponseResultSchema>
 export type ScrapeResponse = z.infer<typeof ScrapeResponseSchema>
+export type ScrapeUrlMarkdownParams = z.infer<typeof ScrapeUrlMarkdownParamsSchema>

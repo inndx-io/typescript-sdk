@@ -17,7 +17,7 @@ pnpm add github:inndx-io/typescript-sdk
 Pin a specific tag or commit (recommended for reproducible installs):
 
 ```bash
-pnpm add github:inndx-io/typescript-sdk#v0.1.2
+pnpm add github:inndx-io/typescript-sdk#v0.2.2
 pnpm add github:inndx-io/typescript-sdk#<commit-sha>
 ```
 
@@ -193,11 +193,12 @@ const markdown = await session.call('https://example.com')
 await session.close()
 ```
 
-Pass request options through (for example a header):
+Pass scrapeUrlMarkdown options through:
 
 ```ts
 const markdown = await session.call('https://example.com', {
-  headers: { 'X-Scrape-Proxy': 'isp' },
+  proxy: 'isp',
+  timeout_seconds: 30,
 })
 ```
 

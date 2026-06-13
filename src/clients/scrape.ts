@@ -5,6 +5,7 @@ import {
   ScrapeRequestSchema,
   type ScrapeResponse,
   ScrapeResponseSchema,
+  type ScrapeUrlMarkdownParams,
 } from '@/types/scrape'
 
 export class ScrapeClient {
@@ -33,9 +34,17 @@ export class ScrapeClient {
   scrapeUrlMarkdown(opts?: SessionOptions) {
     return new SessionScope(
       this.sessions.open(opts),
-      (http, url: string, init?: RequestInit) =>
+      (http, url: string, params?: ScrapeUrlMarkdownParams, init?: RequestInit) =>
         http
-          .getRaw(http.buildUrl(`/v1/scrape/${url}`), init)
+          .getRaw(http.buildUrl(`/v1/scrape/${url}`), {
+            ...init,
+            headers: {
+              ...init?.headers,
+              ...(params?.timeout_seconds ? { 'X-Scrape-Timeout': params.timeout_seconds.toString() } : {}),
+              ...(params?.proxy ? { 'X-Scrape-Proxy': JSON.stringify(params.proxy) } : {}),
+              ...(params?.locale ? { 'X-Scrape-Locale': params.locale } : {}),
+            }
+          })
           .then(r => r.text())
     )
   }
